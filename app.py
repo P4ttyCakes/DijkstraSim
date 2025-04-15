@@ -18,28 +18,33 @@ container_height = 150 * (b + 1)
 # Button to start algorithm
 run_dijkstra = st.button("Start Dijkstra's Algorithm")
 
-# Setup graph
-nodes = []
-for i in range(a + 1):
-    row = []
+# Create nodes function
+def create_nodes(a, b):
+    nodes = []
+    for i in range(a + 1):
+        row = []
+        for j in range(b + 1):
+            row.append(Node(i, j))
+        nodes.append(row)
+    return nodes
+
+# Create edges function
+def create_edges(nodes, a, b, min_w, max_w):
     for j in range(b + 1):
-        row.append(Node(i, j))
-    nodes.append(row)
+        for i in range(a):
+            w1 = random.randint(min_w, max_w)
+            nodes[i][j].edges_out.append(Edge(w1, nodes[i][j], nodes[i + 1][j]))
+            w2 = random.randint(min_w, max_w)
+            nodes[i + 1][j].edges_out.append(Edge(w2, nodes[i + 1][j], nodes[i][j]))
 
-# Create edges with random weights
-for j in range(b + 1):
-    for i in range(a):
-        w1 = random.randint(min_w, max_w)
-        nodes[i][j].edges_out.append(Edge(w1, nodes[i][j], nodes[i + 1][j]))
-        w2 = random.randint(min_w, max_w)
-        nodes[i + 1][j].edges_out.append(Edge(w2, nodes[i + 1][j], nodes[i][j]))
+    for i in range(a + 1):
+        for j in range(b):
+            w3 = random.randint(min_w, max_w)
+            nodes[i][j].edges_out.append(Edge(w3, nodes[i][j], nodes[i][j + 1]))
+            w4 = random.randint(min_w, max_w)
+            nodes[i][j + 1].edges_out.append(Edge(w4, nodes[i][j + 1], nodes[i][j]))
 
-for i in range(a + 1):
-    for j in range(b):
-        w3 = random.randint(min_w, max_w)
-        nodes[i][j].edges_out.append(Edge(w3, nodes[i][j], nodes[i][j + 1]))
-        w4 = random.randint(min_w, max_w)
-        nodes[i][j + 1].edges_out.append(Edge(w4, nodes[i][j + 1], nodes[i][j]))
+    return nodes
 
 # Prepare graph for AGraph
 agraph_nodes = []
@@ -48,6 +53,9 @@ node_ids = {}
 
 # Helper set to track added edge pairs
 edge_pairs = set()
+
+nodes = create_nodes(a, b)  # Create nodes
+nodes = create_edges(nodes, a, b, min_w, max_w)  # Create edges
 
 for i in range(a + 1):
     for j in range(b + 1):
@@ -81,10 +89,8 @@ for i in range(a + 1):
                     color="gray",
                     font={"color": "red" if is_reverse else "green"},
                     strokeWidth=1,
-
                 )
             )
-
 
 # Run Dijkstra's algorithm if button clicked
 if run_dijkstra:
