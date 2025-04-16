@@ -18,6 +18,11 @@ container_height = 150 * (b + 1)
 # Button to start algorithm
 run_dijkstra = st.button("Start Dijkstra's Algorithm")
 
+# Initialize session state for selected node
+if 'selected_node' not in st.session_state:
+    st.session_state.selected_node = None
+
+
 # Create nodes function
 def create_nodes(a, b):
     nodes = []
@@ -27,6 +32,7 @@ def create_nodes(a, b):
             row.append(Node(i, j))
         nodes.append(row)
     return nodes
+
 
 # Create edges function
 def create_edges(nodes, a, b, min_w, max_w):
@@ -46,6 +52,7 @@ def create_edges(nodes, a, b, min_w, max_w):
 
     return nodes
 
+
 # Prepare graph for AGraph
 agraph_nodes = []
 agraph_edges = []
@@ -62,7 +69,17 @@ for i in range(a + 1):
         n = nodes[i][j]
         node_id = f"{i},{j}"
         node_ids[n] = node_id
-        color = "green" if (i == 0 and j == 0) else "red" if (i == a and j == b) else "#97C2FC"
+
+        # Set node color based on selection state or special positions
+        if st.session_state.selected_node == node_id:
+            color = "#FFA500"  # Orange for selected node
+        elif (i == 0 and j == 0):
+            color = "green"  # Start node
+        elif (i == a and j == b):
+            color = "red"  # End node
+        else:
+            color = "#97C2FC"  # Default color
+
         agraph_nodes.append(
             ANode(
                 id=node_id,
@@ -109,7 +126,7 @@ if run_dijkstra:
                 source=node_ids[e.start],
                 target=node_ids[e.end],
                 color="yellow",
-                strokeWidth=12
+                strokeWidth=20
             )
         )
         current = e.start
@@ -135,23 +152,92 @@ div:has(> canvas) {
 </style>
 """, unsafe_allow_html=True)
 
-# Create the config with locked positions
+# Create the config with interactive options
 config = Config(
     width=container_width,
     height=container_height,
     directed=True,
     physics=False,
     hierarchical=False,
-    staticGraph=True,
-    nodeHighlightBehavior=False,
-    staticImage=True
+    staticGraph=False,  # Changed to False to allow interaction
+    nodeHighlightBehavior=True,  # Enable highlighting on hover
+    staticImage=False  # Changed to False to allow interaction
 )
 
-agraph(nodes=agraph_nodes, edges=agraph_edges, config=config)
+# Create buttons for each node
+st.write("### Select a Node")
+cols = st.columns(min(5, a + 1))  # Create column layout for buttons
+node_buttons = {}
 
-# Add a key explaining font colors
+for i in range(a + 1):
+    for j in range(b + 1):
+        node_id = f"{i},{j}"
+        col_idx = i % len(cols)  # Distribute buttons across columns
+
+        # Add some visual indication if this is start or end node
+        button_label = node_id
+        if i == 0 and j == 0:
+            button_label = f"🟢 {node_id}"
+        elif i == a and j == b:
+            button_label = f"🔴 {node_id}"
+
+        # Add selection indicator
+        if st.session_state.selected_node == node_id:
+            button_label = f"✓ {button_label}"
+
+        with cols[col_idx]:
+            if st.button(button_label, key=f"btn_{node_id}"):
+                st.session_state.selected_node = node_id
+                st.rerun()
+
+# Display the graph
+selected_node = agraph(nodes=agraph_nodes, edges=agraph_edges, config=config)
+
+# If a node was selected in the graph, update our selection
+if selected_node:
+    st.session_state.selected_node = selected_node
+    st.rerun()
+
+# Display selected node information
+if st.session_state.selected_node:
+    st.write(f"### Selected Node: {st.session_state.selected_node}")
+
+    # Parse coordinates from node id
+    try:
+        x, y = map(int, st.session_state.selected_node.split(','))
+
+        # Show node details
+        st.write(f"Position: ({x}, {y})")
+
+        # Show connected edges
+        st.write("#### Connected Edges:")
+        edge_info = []
+        for i in range(a + 1):
+            for j in range(b + 1):
+                if i == x and j == y:
+                    for edge in nodes[i][j].edges_out:
+                        edge_info.append(f"To ({edge.end.x}, {edge.end.y}) - Weight: {edge.weight}")
+
+        if edge_info:
+            for info in edge_info:
+                st.write(f"- {info}")
+        else:
+            st.write("No connected edges found.")
+
+        # Add a button to clear selection
+        if st.button("Clear Selection"):
+            st.session_state.selected_node = None
+            st.rerun()
+    except ValueError:
+        st.error("Invalid node format")
+
+# Add a key explaining font colors and node selection
 st.markdown("""
 ### 🔑 Edge Label Key
 - 🟩 <span style='color:green;'>Green label</span>: Forward edge  
 - 🟥 <span style='color:red;'>Red label</span>: Reverse edge  
+
+### Node Selection
+- Click on any node in the graph or use the buttons above to select a node
+- Selected nodes will appear in orange in the graph
 """, unsafe_allow_html=True)
